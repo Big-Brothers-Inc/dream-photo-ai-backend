@@ -1,0 +1,41 @@
+# Виртуальные окружения
+venv/
+venv_py311/
+env/
+.env
+
+# Python кэш
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Логи
+*.log
+logs/
+
+# Временные файлы
+temp_files/
+.DS_Store
+*.tmp
+
+# База данных
+*.sqlite
+*.sqlite3
+*.db
+
+# Директории с данными пользователей
+user_training_photos/
+uploaded_photos/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Другие
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/ 
