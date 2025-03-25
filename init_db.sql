@@ -13,20 +13,19 @@ BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
 
 -- Удаление таблиц в безопасном порядке
-DROP TABLE IF EXISTS "AdminAction" CASCADE;
-DROP TABLE IF EXISTS "GlobalStats" CASCADE;
-DROP TABLE IF EXISTS "PromoUsage" CASCADE;
-DROP TABLE IF EXISTS "PromoCode" CASCADE;
-DROP TABLE IF EXISTS "UserJourney" CASCADE;
-DROP TABLE IF EXISTS "Generation" CASCADE;
-DROP TABLE IF EXISTS "LoraPrompt" CASCADE;
-DROP TABLE IF EXISTS "ExtraLora" CASCADE;
-DROP TABLE IF EXISTS "Model" CASCADE;
-DROP TABLE IF EXISTS "TokenGift" CASCADE;
-DROP TABLE IF EXISTS "ReferralInvite" CASCADE;
-DROP TABLE IF EXISTS "Payment" CASCADE;
-DROP TABLE IF EXISTS "Source" CASCADE;
-DROP TABLE IF EXISTS "User" CASCADE;
+DROP TABLE IF EXISTS "user" CASCADE;
+DROP TABLE IF EXISTS "admin" CASCADE;
+DROP TABLE IF EXISTS "admin_actions" CASCADE;
+DROP TABLE IF EXISTS "payment" CASCADE;
+DROP TABLE IF EXISTS "enrollment" CASCADE;
+DROP TABLE IF EXISTS "referral_invite" CASCADE;
+DROP TABLE IF EXISTS "model" CASCADE;
+DROP TABLE IF EXISTS "lora_tag" CASCADE;
+DROP TABLE IF EXISTS "lora" CASCADE;
+DROP TABLE IF EXISTS "lora_tag_relation" CASCADE;
+DROP TABLE IF EXISTS "user_journey" CASCADE;
+DROP TABLE IF EXISTS "promo_code" CASCADE;
+DROP TABLE IF EXISTS "promo_usage" CASCADE;
 
 COMMIT;
 
@@ -40,28 +39,49 @@ CREATE TABLE IF NOT EXISTS "user" (
     username VARCHAR(100),                     -- Имя пользователя в Telegram
     first_name VARCHAR(100),                   -- Имя пользователя
     last_name VARCHAR(100),                    -- Фамилия пользователя
-    activation_date TIMESTAMP,                 -- Дата активации аккаунта
+    activation_dttm TIMESTAMP,                 -- Дата активации аккаунта
     tokens_left INTEGER DEFAULT 0,             -- Количество оставшихся токенов для генерации
     blocked BOOLEAN DEFAULT FALSE,             -- Флаг блокировки пользователя
     language VARCHAR(10) DEFAULT 'ru',         -- Предпочитаемый язык пользователя
     last_active TIMESTAMP,                     -- Последняя активность пользователя
-    user_state VARCHAR(50) DEFAULT 'new',      -- Текущее состояние/этап пользователя в боте
-    images_generated INTEGER DEFAULT 0,        -- Количество сгенерированных изображений
-    models_trained INTEGER DEFAULT 0           -- Количество обученных моделей
+    user_state VARCHAR(50) DEFAULT 'NEW',      -- Текущее состояние/этап пользователя в боте
 );
+
+CREATE TABLE IF NOT EXISTS "admin" (
+    admin_id BIGINT PRIMARY KEY,
+    user_id BIGINT REFERENCES "user"(user_id), -- ID пользователя
+    status VARCHAR(20) DEFAULT "ACTIVE",
+)
+
+CREATE TABLE IF NOT EXISTS "admin_actions" (
+    action_id BIGINT PRIMARY KEY,
+    admin_id BIGINT REFERENCES "user"(user_id),
+    action VARCHAR(20), -- Что сделал. Забанил/Разбанил/Создал/Удалил
+    user_id BIGINT REFERENCES "user"(user_id), -- ID пользователя которого забанили/разбанили
+    lora_id BIGINT REFERENCES "lora"(lora_id), -- ID лоры, которую добавили/убрали
+    -- Можно дополнять другими действиями и объектами взаимодействия. Пока не придумал оптимизацию на маленьких масштабах
+)
 
 -- Обновленная таблица платежей
 CREATE TABLE IF NOT EXISTS "payment" (
     payment_id SERIAL PRIMARY KEY,             -- Уникальный ID платежа
     user_id BIGINT REFERENCES "user"(user_id), -- ID пользователя, сделавшего платеж
-    date TIMESTAMP DEFAULT NOW(),              -- Дата и время платежа
+    payment_dttm TIMESTAMP DEFAULT NOW(),      -- Дата и время платежа
     amount INTEGER NOT NULL,                   -- Сумма платежа (в копейках)
     tokens INTEGER NOT NULL,                   -- Количество купленных токенов
     payment_method VARCHAR(50),                -- Метод оплаты
     transaction_id VARCHAR(100),               -- ID транзакции платежной системы
     status VARCHAR(20) DEFAULT 'completed',    -- Статус платежа
-    promo_code VARCHAR(50),                    -- Использованный промокод (если есть)
-    discount_percent INTEGER DEFAULT 0         -- Процент скидки
+    promo_id BIGINT REFERENCES "promo_code"(promo_id)   -- Использованный промокод (если есть)
+);
+
+CREATE TABLE IF NOT EXISTS "enrollment" (                -- англ(зачисление)
+    enrollment_id SERIAL PRIMARY KEY,                    -- ID
+    user_id BIGINT REFERENCES "user"(user_id),           -- Пользователь
+    payment_id REFERENCES "payment"(payment_id),         -- Привязка к транзакции денежной(если есть)
+    promo_id BIGINT REFERENCES "promo_code"(promo_id),   -- Использованный промокод (если есть). Важно! Тут одно из двух всегда будет
+    enrollment_dttm TIMESTAMP DEFAULT NOW(),             -- Время зачисления
+    amount INTEGER NOT NULL,                             -- Количество токенов
 );
 
 -- Обновленная таблица реферальных приглашений с добавленными полями
@@ -69,7 +89,7 @@ CREATE TABLE IF NOT EXISTS "referral_invite" (
     invite_id SERIAL PRIMARY KEY,              -- Уникальный ID приглашения
     referrer_id BIGINT REFERENCES "user"(user_id), -- ID пользователя-реферера
     referred_id BIGINT REFERENCES "user"(user_id), -- ID приглашенного пользователя
-    date TIMESTAMP DEFAULT NOW(),              -- Дата приглашения
+    invite_dttm TIMESTAMP DEFAULT NOW(),       -- Дата приглашения
     bonus_paid BOOLEAN DEFAULT FALSE,          -- Выплачен ли бонус рефереру
     invite_link VARCHAR(100),                  -- Уникальная ссылка-приглашение
     referral_code VARCHAR(20),                 -- Уникальный реферальный код пользователя
@@ -87,8 +107,8 @@ CREATE TABLE IF NOT EXISTS "model" (
     training_id TEXT,                          -- ID тренировки в Replicate API
     replicate_version TEXT,                    -- Версия модели в Replicate
     model_url TEXT,                            -- Полный URL модели
-    created_at TIMESTAMP DEFAULT NOW(),        -- Дата создания модели
-    updated_at TIMESTAMP DEFAULT NOW(),        -- Дата последнего обновления
+    create_dttm TIMESTAMP DEFAULT NOW(),       -- Дата создания модели
+    update_dttm TIMESTAMP DEFAULT NOW(),       -- Дата последнего обновления
     training_duration INTEGER,                 -- Длительность обучения в секундах
     training_cost INTEGER,                     -- Стоимость обучения в токенах
     model_type VARCHAR(20) DEFAULT 'user'      -- Тип модели (user, system)
@@ -111,7 +131,7 @@ CREATE TABLE IF NOT EXISTS "lora" (
     default_weight DECIMAL(4,2) DEFAULT 1.0,   -- Вес по умолчанию (0.00-1.50)
     prompt_text TEXT,                          -- Текст промпта
     preview_url TEXT,                          -- URL превью LORA
-    created_at TIMESTAMP DEFAULT NOW(),        -- Дата создания
+    create_dttm TIMESTAMP DEFAULT NOW(),        -- Дата создания
     user_id BIGINT REFERENCES "user"(user_id), -- Кто создал (админ)
     is_active BOOLEAN DEFAULT TRUE,            -- Активна ли LORA
     sex BOOLEAN                                -- Пол для генерации (м/ж)
@@ -132,9 +152,9 @@ CREATE TABLE IF NOT EXISTS "generation" (
     lora_id INTEGER REFERENCES "lora"(lora_id), -- ID LORA
     prompt_text TEXT,                          -- Полный текст промпта
     lora_scale DECIMAL(4,2),                   -- Фактический вес LoRA, использованный в генерации
-    start_date TIMESTAMP DEFAULT NOW(),        -- Дата и время начала генерации
-    finish_date TIMESTAMP,                     -- Дата и время завершения генерации
-    error_date TIMESTAMP,                      -- Дата и время ошибки (если произошла)
+    start_dttm TIMESTAMP DEFAULT NOW(),        -- Дата и время начала генерации
+    finish_dttm TIMESTAMP,                     -- Дата и время завершения генерации
+    error_dttm TIMESTAMP,                      -- Дата и время ошибки (если произошла)
     error_message TEXT,                        -- Сообщение об ошибке
     mark_feedback INTEGER,                     -- Оценка результата пользователем (1-5)
     text_feedback TEXT,                        -- Текстовый отзыв пользователя  
@@ -152,7 +172,7 @@ CREATE TABLE IF NOT EXISTS "user_journey" (
     journey_id SERIAL PRIMARY KEY,             -- Уникальный ID записи
     user_id BIGINT REFERENCES "user"(user_id), -- ID пользователя
     event_type VARCHAR(50) NOT NULL,           -- Тип события (registration, first_generation, etc)
-    timestamp TIMESTAMP DEFAULT NOW(),         -- Время события
+    action_dttm TIMESTAMP DEFAULT NOW(),         -- Время события
     metadata JSONB                             -- Дополнительные данные о событии
 );
 
@@ -161,7 +181,7 @@ CREATE TABLE IF NOT EXISTS "promo_code" (
     promo_id SERIAL PRIMARY KEY,               -- Уникальный ID промокода
     code VARCHAR(50) NOT NULL UNIQUE,          -- Код промокода
     discount_percent INTEGER,                  -- Процент скидки
-    tokens_bonus INTEGER,                      -- Бонусные токены
+    tokens_amount INTEGER,                     -- Бонусные токены
     valid_from TIMESTAMP DEFAULT NOW(),        -- Начало действия
     valid_to TIMESTAMP,                        -- Окончание действия
     max_usages INTEGER,                        -- Максимальное количество использований
@@ -174,7 +194,7 @@ CREATE TABLE IF NOT EXISTS "promo_usage" (
     usage_id SERIAL PRIMARY KEY,               -- Уникальный ID использования
     promo_id INTEGER REFERENCES "promo_code"(promo_id), -- ID промокода
     user_id BIGINT REFERENCES "user"(user_id), -- ID пользователя
-    used_at TIMESTAMP DEFAULT NOW(),           -- Время использования
+    usage_dttm TIMESTAMP DEFAULT NOW(),           -- Время использования
     payment_id INTEGER REFERENCES "payment"(payment_id) -- Связанный платеж (если есть)
 );
 
