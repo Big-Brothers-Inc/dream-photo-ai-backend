@@ -1,8 +1,8 @@
 import asyncio
 
-from utils.logger import logger
+from app.utils.logger import logger
 from loader import bot, dp
-from db import init_connection, close_connection
+from app.db.db import close_connection
 from handlers import register_all_handlers
 
 

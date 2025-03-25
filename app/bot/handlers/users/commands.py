@@ -5,7 +5,7 @@ from aiogram.utils.markdown import hbold
 import logging
 from datetime import datetime
 import os
-from repository import get_user_repository
+from app.repository import get_user_repository
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 

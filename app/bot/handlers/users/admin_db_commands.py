@@ -1,19 +1,17 @@
-from aiogram import Router, types
+from aiogram import Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import logging
-import json
 import os
-from typing import Dict, List, Any, Optional
 
 # Импорт репозиториев
-from repository import (
+from app.repository import (
     init_db, close_db,
     get_user_repository, get_model_repository,
     get_generation_repository, get_payment_repository,
-    get_referral_repository, get_admin_repository
+    get_admin_repository
 )
 
 # Создаем логгер

@@ -29,8 +29,9 @@ class Settings(BaseSettings):
             'database': self.DB_NAME,
             'user': self.DB_USER,
             'password': self.DB_PASSWORD,
-            'min_size': self.DB_MIN_CONN,
-            'max_size': self.DB_MAX_CONN,
+            # 🔽 psycopg2 не поддерживает это:
+            # 'min_size': self.DB_MIN_CONN,
+            # 'max_size': self.DB_MAX_CONN,
         }
 
     @property

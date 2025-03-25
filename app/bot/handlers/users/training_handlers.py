@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from repository import get_user_repository, get_model_repository
+from app.repository import get_user_repository, get_model_repository
 
 # Настройка логирования
 logger = logging.getLogger(__name__)

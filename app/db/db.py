@@ -1,7 +1,7 @@
 import psycopg2
 from contextlib import contextmanager
-from config import config
-from utils.logger import logger
+from app.config import config
+from app.utils.logger import logger
 
 # Глобальное подключение
 connection = None

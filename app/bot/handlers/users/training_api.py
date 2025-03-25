@@ -1,12 +1,10 @@
 import os
-import json
 import logging
 import shutil
 import tempfile
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from typing import List
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения
@@ -19,11 +17,11 @@ print(f"[training_api.py] DISABLE_DB_CHECK после обработки: {DISAB
 
 # Импортируем репозитории для работы с базой данных
 if not DISABLE_DB_CHECK:
-    from repository.model_repository import ModelRepository
-    from repository.user_repository import UserRepository
+    from app.repository.model_repository import ModelRepository
+    from app.repository.user_repository import UserRepository
 
 # Импортируем утилиты для обработки изображений и запуска обучения
-from utils.training_utils import (
+from app.utils.training_utils import (
     ensure_upload_dir_exists,
     get_user_upload_path,
     clear_user_upload_dir,
