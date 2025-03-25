@@ -56,18 +56,21 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+
 # Middleware для логирования запросов и обработки заголовков
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     # Логируем заголовки запроса для отладки
     logger.info(f"Request headers: {request.headers}")
-    
+
     # Продолжаем обработку запроса
     response = await call_next(request)
     return response
 
+
 # Регистрируем API-эндпоинты для обучения моделей
 setup_training_api(app)
+
 
 # События при запуске и остановке приложения
 @app.on_event("startup")
@@ -85,6 +88,7 @@ async def startup_event():
             logger.error("Ошибка при инициализации базы данных")
             raise HTTPException(status_code=500, detail="Database initialization failed")
 
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """
@@ -97,6 +101,7 @@ async def shutdown_event():
         else:
             logger.error("Ошибка при закрытии соединений с базой данных")
 
+
 # Корневой эндпоинт для проверки работоспособности API
 @app.get("/")
 async def root():
@@ -104,6 +109,7 @@ async def root():
     Корневой эндпоинт для проверки работоспособности API
     """
     return {"status": "success", "message": "Dream Photo API is running"}
+
 
 # Эндпоинт для проверки подключения к базе данных
 @app.get("/health")
@@ -124,6 +130,7 @@ async def health_check():
         logger.error(f"Ошибка при проверке здоровья приложения: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # Запуск приложения
 if __name__ == "__main__":
     # Запускаем сервер
@@ -133,4 +140,4 @@ if __name__ == "__main__":
         port=API_PORT,
         reload=True,  # В продакшене нужно установить False
         log_level="info"
-    ) 
+    )

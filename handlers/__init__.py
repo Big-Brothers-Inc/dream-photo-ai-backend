@@ -1,4 +1,5 @@
-# Файл инициализации пакета
-from . import commands
+from .users import register_user_handlers
 
-__all__ = ["commands"] 
+
+def register_all_handlers(dp):
+    register_user_handlers(dp)

@@ -1,58 +1,42 @@
-# main.py
-
 import asyncio
-import os
-import sys
-
-# Добавляем корневую директорию проекта в путь поиска модулей
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.logger import logger
 from loader import bot, dp
-from repository import init_db, close_db
-
-from handlers.admin_db_commands import setup_admin_handlers
-from handlers.commands import router as commands_router
-from handlers.training_handlers import setup_training_handlers
-# импорт других обработчиков...
-
-import handlers.admin_notifications  # чтобы точно подгрузился
-
-# Регистрируем обработчики
-setup_admin_handlers(dp)
-dp.include_router(commands_router)
-setup_training_handlers(dp)
-# другие обработчики...
+from db import init_connection, close_connection
+from handlers import register_all_handlers
 
 
-async def on_startup():
-    logger.info("Инициализация базы данных...")
-    if init_db():
-        logger.info("База данных успешно инициализирована")
-    else:
-        logger.error("Ошибка при инициализации базы данных")
+async def on_startup() -> None:
+    logger.info("Инициализация подключения к базе данных...")
+    #init_connection()
+
+    logger.info("Регистрация всех обработчиков...")
+    register_all_handlers(dp)
+
+    logger.info("Бот готов к запуску.")
 
 
-async def on_shutdown():
-    logger.info("Закрытие соединений с базой данных...")
-    if close_db():
-        logger.info("Соединения с базой данных закрыты")
-    else:
-        logger.error("Ошибка при закрытии соединений с базой данных")
+async def on_shutdown() -> None:
+    logger.info("Остановка бота...")
+    close_connection()
+    logger.info("Подключение к базе данных закрыто.")
 
 
-async def main():
+async def main() -> None:
     logger.info("Запуск бота...")
 
     await on_startup()
 
     try:
-        logger.info("Бот запущен!")
         await dp.start_polling(bot)
+    except Exception as e:
+        logger.exception(f"Ошибка при запуске бота: {e}")
     finally:
         await on_shutdown()
-        logger.info("Бот остановлен!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Бот остановлен вручную (Ctrl+C)")

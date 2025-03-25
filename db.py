@@ -1,41 +1,41 @@
 import psycopg2
-import os
-from dotenv import load_dotenv
 from contextlib import contextmanager
+from config import config
+from utils.logger import logger
 
+# Глобальное подключение
 connection = None
-load_dotenv()
 
 
 def init_connection():
+    """
+    Инициализация подключения к PostgreSQL
+    """
     global connection
     if connection is None:
         try:
-            connection = psycopg2.connect(
-                database=os.environ.get("POSTGRES_DB"),
-                user=os.environ.get("POSTGRES_USER"),
-                password=os.environ.get("POSTGRES_PASSWORD"),
-                host="db",
-                port=os.environ.get("POSTGRES_PORT")
-            )
-            print("Connected to the PostgreSQL database successfully.")
+            connection = psycopg2.connect(**config.DB_CONFIG)
+            logger.info("Подключение к базе данных успешно установлено.")
         except (Exception, psycopg2.Error) as error:
-            print("Error while connecting to PostgreSQL:", error)
+            logger.error(f"Ошибка подключения к базе данных: {error}")
 
 
 def close_connection():
+    """
+    Закрытие подключения к PostgreSQL
+    """
     global connection
     if connection is not None:
         connection.close()
-        print("Database connection closed.")
+        logger.info("Подключение к базе данных закрыто.")
         connection = None
 
 
 @contextmanager
 def get_cursor():
     """
-    Yields a cursor from the global connection. Automatically closes it after use.
-    Ensures the connection is initialized before use.
+    Контекстный менеджер для курсора.
+    Гарантирует commit/rollback и автоматическое закрытие курсора.
     """
     global connection
     if connection is None:
@@ -47,7 +47,7 @@ def get_cursor():
         connection.commit()
     except Exception as e:
         connection.rollback()
-        print("Error during DB operation:", e)
+        logger.error(f"Ошибка во время выполнения запроса: {e}")
         raise
     finally:
         cursor.close()

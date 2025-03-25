@@ -30,6 +30,7 @@ db_config = {
 
 logger.info(f"Параметры подключения к БД: хост={db_config['host']}, база={db_config['database']}, пользователь={db_config['user']}")
 
+
 def connect_to_db():
     """Подключение к базе данных"""
     try:
@@ -39,6 +40,7 @@ def connect_to_db():
     except Exception as e:
         logger.error(f"Ошибка подключения к базе данных: {e}")
         return None
+
 
 def add_test_lora_models(conn):
     """Добавление тестовых LoRA моделей в базу данных"""

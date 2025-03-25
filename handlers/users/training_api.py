@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Создаем роутер API
 router = APIRouter(prefix="/api/training", tags=["training"])
 
+
 # Модель данных для запроса на обучение модели
 class TrainingRequest(BaseModel):
     user_id: int
@@ -48,21 +49,24 @@ class TrainingRequest(BaseModel):
     model_name: str
     trigger_word: str = "TOK_USR"
 
+
 # Модель данных для проверки статуса обучения
 class StatusCheckRequest(BaseModel):
     training_id: str
     user_id: int
+
 
 # Создаем экземпляры репозиториев
 if not DISABLE_DB_CHECK:
     model_repository = ModelRepository()
     user_repository = UserRepository()
 
+
 @router.post("/upload-photos", status_code=status.HTTP_200_OK)
 async def upload_photos(
-    user_id: int = Form(...),
-    username: str = Form(...),
-    photos: List[UploadFile] = File(...),
+        user_id: int = Form(...),
+        username: str = Form(...),
+        photos: List[UploadFile] = File(...),
 ):
     """
     Загружает фотографии пользователя для обучения модели.
@@ -80,15 +84,15 @@ async def upload_photos(
         user = user_repository.get(user_id)
         if not user:
             raise HTTPException(status_code=404, detail=f"Пользователь с ID {user_id} не найден")
-    
+
     # Проверяем, существует ли базовая директория для загрузок
     if not ensure_upload_dir_exists():
         raise HTTPException(status_code=500, detail="Не удалось создать директорию для загрузок")
-    
+
     # Очищаем директорию пользователя от старых файлов
     if not clear_user_upload_dir(username, user_id):
         logger.warning(f"Не удалось очистить директорию пользователя {username}")
-    
+
     # Создаем временные файлы для загруженных фотографий
     temp_files = []
     try:
@@ -100,20 +104,20 @@ async def upload_photos(
                     status_code=400,
                     detail=f"Файл {photo.filename} не является изображением. Тип: {content_type}"
                 )
-            
+
             # Создаем временный файл
             with tempfile.NamedTemporaryFile(delete=False) as temp:
                 # Сохраняем содержимое загруженного файла
                 shutil.copyfileobj(photo.file, temp)
                 temp_files.append(temp.name)
-        
+
         # Обрабатываем и конвертируем загруженные изображения
         user_path = get_user_upload_path(username, user_id)
         converted_paths = process_and_convert_images(username, user_id, temp_files)
-        
+
         if not converted_paths:
             raise HTTPException(status_code=500, detail="Не удалось обработать загруженные изображения")
-        
+
         return {
             "status": "success",
             "message": f"Загружено и обработано {len(converted_paths)} изображений",
@@ -122,16 +126,17 @@ async def upload_photos(
             "image_count": len(converted_paths),
             "user_upload_dir": user_path
         }
-    
+
     except Exception as e:
         logger.error(f"Ошибка при загрузке фотографий: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
     finally:
         # Удаляем временные файлы
         for temp_file in temp_files:
             if os.path.exists(temp_file):
                 os.unlink(temp_file)
+
 
 @router.post("/start-training", status_code=status.HTTP_200_OK)
 async def start_training(request: TrainingRequest):
@@ -149,46 +154,46 @@ async def start_training(request: TrainingRequest):
     username = request.username
     model_name = request.model_name
     trigger_word = request.trigger_word
-    
+
     try:
         # Проверяем наличие пользователя в базе данных
         if not DISABLE_DB_CHECK:
             user = user_repository.get(user_id)
             if not user:
                 raise HTTPException(status_code=404, detail=f"Пользователь с ID {user_id} не найден")
-            
+
             # Проверяем достаточное количество токенов у пользователя
             if user.get("token_balance", 0) < 300:  # Стоимость обучения - 300 токенов
                 raise HTTPException(
                     status_code=403,
                     detail="Недостаточно токенов для обучения модели. Требуется минимум 300 токенов."
                 )
-        
+
         # Проверяем наличие загруженных изображений
         user_path = get_user_upload_path(username, user_id)
         image_files = [f for f in os.listdir(user_path) if f.endswith('.jpg')]
-        
+
         if not image_files:
             raise HTTPException(
                 status_code=400,
                 detail="Не найдено загруженных изображений. Сначала загрузите фотографии."
             )
-        
+
         # Создаем полные пути к изображениям
         image_paths = [os.path.join(user_path, f) for f in image_files]
-        
+
         # Создаем ZIP-архив с изображениями
         zip_path = create_zip_archive(username, user_id, image_paths)
         if not zip_path:
             raise HTTPException(status_code=500, detail="Не удалось создать ZIP-архив с изображениями")
-        
+
         # В режиме отключенной базы данных имитируем ответы
         if DISABLE_DB_CHECK:
             # Генерируем фиктивный ID тренировки
             import uuid
             training_id = str(uuid.uuid4())
             model_id = 1
-            
+
             return {
                 "status": "success",
                 "message": "Обучение модели успешно запущено",
@@ -200,18 +205,18 @@ async def start_training(request: TrainingRequest):
                 "username": username,
                 "tokens_spent": 300
             }
-        
+
         # Загружаем ZIP-архив в облачное хранилище
         zip_url = upload_zip_to_cloud(zip_path)
         if not zip_url:
             raise HTTPException(status_code=500, detail="Не удалось загрузить ZIP-архив в облачное хранилище")
-        
+
         # Запускаем обучение модели на Replicate
         training_info = start_replicate_training(username, user_id, zip_url, model_name, trigger_word)
         if not training_info or training_info.get("status") == "failed":
             error_msg = training_info.get("error", "Неизвестная ошибка") if training_info else "Неизвестная ошибка"
             raise HTTPException(status_code=500, detail=f"Не удалось запустить обучение модели: {error_msg}")
-        
+
         # Сохраняем информацию о модели в базе данных
         model_data = {
             "user_id": user_id,
@@ -222,12 +227,12 @@ async def start_training(request: TrainingRequest):
             "is_public": False,
             "model_type": "user"
         }
-        
+
         model_id = model_repository.create(model_data)
-        
+
         # Вычитаем токены у пользователя
         user_repository.update_token_balance(user_id, -300)
-        
+
         return {
             "status": "success",
             "message": "Обучение модели успешно запущено",
@@ -239,13 +244,14 @@ async def start_training(request: TrainingRequest):
             "username": username,
             "tokens_spent": 300
         }
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Ошибка при запуске обучения модели: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/check-status", status_code=status.HTTP_200_OK)
 async def check_training_status_endpoint(request: StatusCheckRequest):
@@ -271,16 +277,16 @@ async def check_training_status_endpoint(request: StatusCheckRequest):
                 "trigger_word": "TOK_USR",
                 "model_url": None
             }
-        
+
         # Получаем информацию о модели из базы данных
         model = model_repository.get_by_training_id(request.training_id)
         if not model:
             raise HTTPException(status_code=404, detail=f"Модель с training_id {request.training_id} не найдена")
-        
+
         # Проверяем соответствие модели пользователю
         if model["user_id"] != request.user_id:
             raise HTTPException(status_code=403, detail="У вас нет доступа к этой модели")
-        
+
         # Если модель уже в завершенном состоянии, просто возвращаем информацию
         if model["status"] in ["ready", "failed"]:
             return {
@@ -292,14 +298,14 @@ async def check_training_status_endpoint(request: StatusCheckRequest):
                 "trigger_word": model["trigger_word"],
                 "model_url": model.get("model_url", None)
             }
-        
+
         # Проверяем статус обучения на Replicate
         training_status = check_training_status(request.training_id)
-        
+
         # Если статус изменился, обновляем информацию в базе данных
         if training_status["status"] in ["succeeded", "failed", "canceled"]:
             new_status = "ready" if training_status["status"] == "succeeded" else "failed"
-            
+
             # Если обучение успешно завершено, обрабатываем результаты
             if new_status == "ready":
                 # Получаем информацию о модели из результатов обучения
@@ -310,7 +316,7 @@ async def check_training_status_endpoint(request: StatusCheckRequest):
                     model["name"],
                     model["trigger_word"]
                 )
-                
+
                 # Обновляем информацию о модели в базе данных
                 model_repository.update_training_info(
                     model["id"],
@@ -320,10 +326,10 @@ async def check_training_status_endpoint(request: StatusCheckRequest):
             else:
                 # Если обучение завершилось с ошибкой, просто обновляем статус
                 model_repository.update_status(model["id"], new_status)
-            
+
             # Получаем обновленную информацию о модели
             model = model_repository.get_by_training_id(request.training_id)
-        
+
         return {
             "status": "success",
             "model_status": model["status"],
@@ -334,13 +340,14 @@ async def check_training_status_endpoint(request: StatusCheckRequest):
             "trigger_word": model["trigger_word"],
             "model_url": model.get("model_url", None)
         }
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Ошибка при проверке статуса обучения модели: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/user-models/{user_id}", status_code=status.HTTP_200_OK)
 async def get_user_models(user_id: int):
@@ -371,26 +378,27 @@ async def get_user_models(user_id: int):
                     }
                 ]
             }
-        
+
         # Проверяем наличие пользователя в базе данных
         user = user_repository.get(user_id)
         if not user:
             raise HTTPException(status_code=404, detail=f"Пользователь с ID {user_id} не найден")
-        
+
         # Получаем список моделей пользователя
         models = model_repository.get_by_user_id(user_id)
-        
+
         return {
             "status": "success",
             "models": models
         }
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Ошибка при получении списка моделей пользователя: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Добавляем эндпоинт для получения информации о пользователе
 @router.get("/users/{user_id}", status_code=status.HTTP_200_OK)
@@ -418,12 +426,12 @@ async def get_user(user_id: int):
                     "images_generated": 0
                 }
             }
-        
+
         # Получаем информацию о пользователе из базы данных
         user = user_repository.get(user_id)
         if not user:
             raise HTTPException(status_code=404, detail=f"Пользователь с ID {user_id} не найден")
-        
+
         # Добавляем дополнительные поля для фронтенда
         user_data = {
             "user_id": user.get("user_id"),
@@ -435,20 +443,21 @@ async def get_user(user_id: int):
             "last_active": user.get("last_active"),
             "registration_complete": user.get("registration_complete", False)
         }
-        
+
         logger.info(f"Получены данные пользователя {user_id}: {user_data}")
-        
+
         return {
             "status": "success",
             "user": user_data
         }
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Ошибка при получении информации о пользователе: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 def setup_training_api(app):
     """

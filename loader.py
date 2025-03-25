@@ -1,13 +1,10 @@
 # loader.py
 
-from aiogram import Bot, Dispatcher, types
-from dotenv import load_dotenv
-import os
-from aiogram.fsm.storage.memory import MemoryStorage  # <-- если ты на aiogram 3
+from aiogram import Bot, Dispatcher, enums
+from aiogram.fsm.storage.memory import MemoryStorage
+from config import config
 
-load_dotenv()
-
-bot = Bot(token=os.getenv("BOT_TOKEN"), parse_mode=types.ParseMode.HTML)
+# Используем данные из конфигурации
+bot = Bot(token=config.BOT_TOKEN, parse_mode=enums.ParseMode.HTML)
 storage = MemoryStorage()
-
 dp = Dispatcher(bot=bot, storage=storage)

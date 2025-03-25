@@ -32,6 +32,7 @@ BASE_UPLOAD_DIR = os.getenv("BASE_UPLOAD_DIR", "user_training_photos")
 # Настраиваем логгер
 logger = logging.getLogger(__name__)
 
+
 def ensure_upload_dir_exists() -> bool:
     """
     Проверяет существование директории для загрузки фотографий,
@@ -49,6 +50,7 @@ def ensure_upload_dir_exists() -> bool:
         logger.error(f"Ошибка при создании директории для загрузок: {e}")
         return False
 
+
 def get_user_upload_path(username: str, user_id: int) -> str:
     """
     Формирует путь к директории для загрузки фотографий пользователя.
@@ -64,13 +66,14 @@ def get_user_upload_path(username: str, user_id: int) -> str:
     clean_username = "".join(c for c in username if c.isalnum() or c in "_-")
     user_dir = f"{clean_username}_{user_id}"
     user_path = os.path.join(BASE_UPLOAD_DIR, user_dir)
-    
+
     # Создаем директорию пользователя, если она не существует
     if not os.path.exists(user_path):
         os.makedirs(user_path)
         logger.info(f"Создана директория для пользователя {username}: {user_path}")
-    
+
     return user_path
+
 
 def clear_user_upload_dir(username: str, user_id: int) -> bool:
     """
@@ -97,6 +100,7 @@ def clear_user_upload_dir(username: str, user_id: int) -> bool:
         logger.error(f"Ошибка при очистке директории пользователя {username}: {e}")
         return False
 
+
 def convert_image_to_jpg(input_path: str, output_path: str) -> bool:
     """
     Конвертирует изображение в формат JPG.
@@ -122,12 +126,13 @@ def convert_image_to_jpg(input_path: str, output_path: str) -> bool:
             else:
                 # Для RGB изображений просто конвертируем в JPG
                 img.convert('RGB').save(output_path, 'JPEG', quality=95)
-        
+
         logger.info(f"Изображение успешно конвертировано: {input_path} -> {output_path}")
         return True
     except Exception as e:
         logger.error(f"Ошибка при конвертации изображения {input_path}: {e}")
         return False
+
 
 def process_and_convert_images(username: str, user_id: int, image_paths: List[str]) -> List[str]:
     """
@@ -143,18 +148,19 @@ def process_and_convert_images(username: str, user_id: int, image_paths: List[st
     """
     user_path = get_user_upload_path(username, user_id)
     converted_paths = []
-    
+
     for i, img_path in enumerate(image_paths):
         # Формируем путь для сохранения конвертированного изображения
-        jpg_filename = f"image_{i+1}.jpg"
+        jpg_filename = f"image_{i + 1}.jpg"
         jpg_path = os.path.join(user_path, jpg_filename)
-        
+
         # Конвертируем изображение
         if convert_image_to_jpg(img_path, jpg_path):
             converted_paths.append(jpg_path)
-    
+
     logger.info(f"Обработано и конвертировано {len(converted_paths)} из {len(image_paths)} изображений")
     return converted_paths
+
 
 def create_zip_archive(username: str, user_id: int, image_paths: List[str]) -> str:
     """
@@ -173,19 +179,20 @@ def create_zip_archive(username: str, user_id: int, image_paths: List[str]) -> s
     zip_filename = f"{clean_username}_{user_id}.zip"
     user_path = get_user_upload_path(username, user_id)
     zip_path = os.path.join(user_path, zip_filename)
-    
+
     try:
         # Создаем ZIP-архив
         with zipfile.ZipFile(zip_path, 'w') as zipf:
             for img_path in image_paths:
                 # Добавляем в архив только имя файла, без полного пути
                 zipf.write(img_path, os.path.basename(img_path))
-        
+
         logger.info(f"Создан ZIP-архив: {zip_path} с {len(image_paths)} изображениями")
         return zip_path
     except Exception as e:
         logger.error(f"Ошибка при создании ZIP-архива для пользователя {username}: {e}")
         return ""
+
 
 def upload_zip_to_cloud(zip_path: str) -> str:
     """
@@ -201,26 +208,28 @@ def upload_zip_to_cloud(zip_path: str) -> str:
     if DISABLE_DB_CHECK:
         logger.info(f"[ТЕСТОВЫЙ РЕЖИМ] Эмуляция загрузки ZIP-архива: {zip_path}")
         return f"https://cloud-storage.example.com/{os.path.basename(zip_path)}"
-    
+
     try:
         if not os.path.exists(zip_path):
             logger.error(f"ZIP-архив не найден: {zip_path}")
             return ""
-        
+
         # Для демонстрации возвращаем локальный путь
         # В реальном проекте здесь должен быть код для загрузки
         # и получения URL из облачного хранилища
-        
+
         # Эмуляция загрузки в облако
         logger.info(f"ZIP-архив успешно загружен в облачное хранилище: {zip_path}")
         dummy_url = f"https://cloud-storage.example.com/{os.path.basename(zip_path)}"
-        
+
         return dummy_url
     except Exception as e:
         logger.error(f"Ошибка при загрузке ZIP-архива в облачное хранилище: {e}")
         return ""
 
-def start_replicate_training(username: str, user_id: int, zip_url: str, model_name: str, trigger_word: str) -> Dict[str, Any]:
+
+def start_replicate_training(username: str, user_id: int, zip_url: str, model_name: str, trigger_word: str) -> Dict[
+    str, Any]:
     """
     Запускает обучение модели на Replicate с заданными параметрами.
     
@@ -247,13 +256,13 @@ def start_replicate_training(username: str, user_id: int, zip_url: str, model_na
             "user_id": user_id,
             "username": username
         }
-    
+
     try:
         # Настраиваем клиент Replicate с помощью API-ключа
         if REPLICATE_API_KEY:
             # Установка API-ключа для Replicate
             os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_KEY
-        
+
         # Формируем запрос для API Replicate
         # Важно: параметры должны соответствовать API Replicate
         input_data = {
@@ -270,17 +279,17 @@ def start_replicate_training(username: str, user_id: int, zip_url: str, model_na
             "lora_rank": 16,
             "lora_dropout": 0.1,
         }
-        
+
         # Запускаем обучение с помощью Replicate API
         version = "lucataco/lora-training:54bdee3a48fafb1e65dacf9151138ae290b35328ff5fbfd6cc4a8fcfa2dbe3c3"
         training = replicate.run(version, input=input_data)
-        
+
         # Получаем ID обучения и другую информацию из ответа API
         training_id = training["id"]
         status = "started"
-        
+
         logger.info(f"Запущено обучение модели на Replicate: {training_id}")
-        
+
         return {
             "training_id": training_id,
             "status": status,
@@ -295,6 +304,7 @@ def start_replicate_training(username: str, user_id: int, zip_url: str, model_na
             "error": str(e),
             "status": "failed"
         }
+
 
 def check_training_status(training_id: str) -> Dict[str, Any]:
     """
@@ -316,20 +326,20 @@ def check_training_status(training_id: str) -> Dict[str, Any]:
                 "model_url": f"https://replicate.com/models/user/model-{training_id}"
             }
         }
-    
+
     try:
         if REPLICATE_API_KEY:
             # Установка API-ключа для Replicate
             os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_KEY
-        
+
         # Получаем информацию о прогрессе обучения
         prediction = replicate.predictions.get(training_id)
-        
+
         status = prediction.status
         output = prediction.output if prediction.status == "succeeded" else None
-        
+
         logger.info(f"Статус обучения модели {training_id}: {status}")
-        
+
         return {
             "training_id": training_id,
             "status": status,
@@ -343,7 +353,9 @@ def check_training_status(training_id: str) -> Dict[str, Any]:
             "error": str(e)
         }
 
-def process_training_completion(training_id: str, user_id: int, username: str, model_name: str, trigger_word: str) -> Dict[str, Any]:
+
+def process_training_completion(training_id: str, user_id: int, username: str, model_name: str, trigger_word: str) -> \
+Dict[str, Any]:
     """
     Обрабатывает завершение обучения модели и сохраняет результаты.
     
@@ -370,18 +382,18 @@ def process_training_completion(training_id: str, user_id: int, username: str, m
             "status": "completed",
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
-    
+
     try:
         # Получаем статус обучения
         training_status = check_training_status(training_id)
-        
+
         if training_status["status"] == "succeeded":
             # Обучение успешно завершено, получаем информацию о модели
             output = training_status["output"]
-            
+
             # Извлекаем ссылку на модель из результатов обучения
             model_url = output.get("model_url") if output else None
-            
+
             # Формируем информацию о модели
             model_info = {
                 "user_id": user_id,
@@ -393,9 +405,9 @@ def process_training_completion(training_id: str, user_id: int, username: str, m
                 "status": "completed",
                 "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
             }
-            
+
             logger.info(f"Обучение модели {training_id} успешно завершено. Модель доступна по ссылке: {model_url}")
-            
+
             return model_info
         else:
             # Обучение завершилось с ошибкой или еще не завершено
@@ -410,4 +422,4 @@ def process_training_completion(training_id: str, user_id: int, username: str, m
             "training_id": training_id,
             "status": "error",
             "error": str(e)
-        } 
+        }

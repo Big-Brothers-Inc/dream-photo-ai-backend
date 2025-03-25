@@ -21,6 +21,7 @@ if admin_ids_str:
 else:
     logger.warning("Переменная ADMIN_USER_IDS не установлена или пуста")
 
+
 async def notify_admins_about_payment(bot: Bot, user_id: int, username: str):
     """
     Отправляет уведомление всем администраторам о запросе на пополнение баланса
