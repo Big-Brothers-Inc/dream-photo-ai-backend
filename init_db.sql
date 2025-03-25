@@ -12,6 +12,7 @@
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
 
+
 -- Удаление таблиц в безопасном порядке
 DROP TABLE IF EXISTS "user" CASCADE;
 DROP TABLE IF EXISTS "admin" CASCADE;
