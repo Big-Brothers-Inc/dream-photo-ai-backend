@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Any, Tuple
 import logging
-from .base_repository import BaseRepository
+from .db import BaseRepository
 import json
 import psycopg2
 import psycopg2.extras

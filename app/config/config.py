@@ -26,12 +26,11 @@ class Settings(BaseSettings):
         return {
             'host': self.DB_HOST,
             'port': self.DB_PORT,
-            'database': self.DB_NAME,
+            'database': self.DB_NAME,  # ВАЖНО: ключ должен быть "database", не "dbname"
             'user': self.DB_USER,
             'password': self.DB_PASSWORD,
-            # 🔽 psycopg2 не поддерживает это:
-            # 'min_size': self.DB_MIN_CONN,
-            # 'max_size': self.DB_MAX_CONN,
+            'min_connections': self.DB_MIN_CONN,
+            'max_connections': self.DB_MAX_CONN,
         }
 
     @property

@@ -2,8 +2,8 @@ import logging
 from typing import Optional, Any, Dict
 import os
 import dotenv
-from .base_repository import BaseRepository
-from .user_repository import UserRepository
+from .db import BaseRepository
+from .user import UserRepository
 from .model_repository import ModelRepository
 from .generation_repository import GenerationRepository
 from .payment_repository import PaymentRepository

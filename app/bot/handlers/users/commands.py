@@ -1,5 +1,5 @@
 from aiogram import Router, types
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.markdown import hbold
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(CommandStart())
+#@router.message(CommandStart())
 async def command_start(message: types.Message, state: FSMContext):
     """Обработчик команды /start"""
     await state.clear()
@@ -191,7 +191,7 @@ async def process_add_balance(callback: types.CallbackQuery):
     await callback.message.answer("✅ Запрос на пополнение баланса принят! Администратор скоро свяжется с вами.")
 
     # Импортируем модуль admin_notifications только здесь, чтобы избежать циклического импорта
-    from .admin_notifications import notify_admins_about_payment
+    from app.utils.admin_notifications import notify_admins_about_payment
 
     try:
         # Получаем экземпляр бота из контекста callback

@@ -18,7 +18,7 @@ print(f"[training_api.py] DISABLE_DB_CHECK после обработки: {DISAB
 # Импортируем репозитории для работы с базой данных
 if not DISABLE_DB_CHECK:
     from app.repository.model_repository import ModelRepository
-    from app.repository.user_repository import UserRepository
+    from app.repository.user import UserRepository
 
 # Импортируем утилиты для обработки изображений и запуска обучения
 from app.utils.training_utils import (
