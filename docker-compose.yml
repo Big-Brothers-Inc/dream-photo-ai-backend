@@ -1,0 +1,62 @@
+# ================================
+# docker-compose.yml (в корне)
+# ================================
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15.3
+    container_name: dream_photo_db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+
+  flyway:
+    image: flyway/flyway:9.22-alpine
+    container_name: flyway_migrator
+    command: -connectRetries=10 migrate
+    volumes:
+      - ./flyway/sql:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      FLYWAY_USER: ${DB_USER}
+      FLYWAY_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - db
+
+  app:
+    build:
+      context: .
+    container_name: fastapi_app
+    command: sh -c "uvicorn app.api.app:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - db
+      - flyway
+
+  bot:
+    build:
+      context: .
+    container_name: telegram_bot
+    command: python app/bot/main.py
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - db
+      - flyway
+
+volumes:
+  pgdata:
