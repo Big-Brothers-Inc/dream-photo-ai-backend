@@ -120,15 +120,16 @@ CREATE TABLE IF NOT EXISTS "lora" (
 
 
 CREATE TABLE IF NOT EXISTS "admin" (
-    admin_id BIGINT PRIMARY KEY,
+    admin_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES "user"(user_id),
-    status VARCHAR(20) DEFAULT 'ACTIVE'
+    is_active BOOLEAN DEFAULT TRUE,
+    status VARCHAR(20) DEFAULT 'BASE'
 );
 
 
 CREATE TABLE IF NOT EXISTS "admin_actions" (
-    action_id BIGINT PRIMARY KEY,
-    admin_id BIGINT REFERENCES "user"(user_id),
+    action_id BIGSERIAL PRIMARY KEY,
+    admin_id BIGINT REFERENCES "admin"(admin_id),
     action VARCHAR(20),
     user_id BIGINT REFERENCES "user"(user_id),
     lora_id BIGINT REFERENCES "lora"(lora_id)

@@ -4,6 +4,7 @@ from .db import BaseRepository
 
 logger = logging.getLogger(__name__)
 
+
 class ReferralRepository(BaseRepository):
     """
     Репозиторий для работы с реферальной системой

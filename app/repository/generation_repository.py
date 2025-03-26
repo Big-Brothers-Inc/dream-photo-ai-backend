@@ -4,6 +4,7 @@ from .db import BaseRepository
 
 logger = logging.getLogger(__name__)
 
+
 class GenerationRepository(BaseRepository):
     """
     Репозиторий для работы с таблицей генераций изображений

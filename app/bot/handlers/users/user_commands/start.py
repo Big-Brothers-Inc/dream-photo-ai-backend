@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from datetime import datetime
 import os
 
-from app.repository import get_user_repository
+from app.repository.user import UserRepository
 from app.utils.logger import logger
 
 router = Router()
@@ -23,11 +23,7 @@ async def command_start(message: types.Message, state: FSMContext):
     first_name = message.from_user.first_name
     last_name = message.from_user.last_name
 
-    user_repo = get_user_repository()
-    if not user_repo:
-        logger.error("Не удалось получить репозиторий пользователей")
-        await message.answer("Произошла ошибка при регистрации. Попробуйте позже.")
-        return
+    user_repo = UserRepository()
 
     user = user_repo.get_by_id(user_id)
     if user is None:
@@ -91,5 +87,5 @@ async def send_welcome_messages(message: types.Message, user: dict, is_new_user:
         tokens_msg += "\nДля использования бота необходимо пополнить баланс."
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="💎 Пополнить баланс", callback_data="add_balance")
+    builder.button(text="💳 Пополнить баланс", callback_data="add_balance")
     await message.answer(tokens_msg, parse_mode="Markdown", reply_markup=builder.as_markup())

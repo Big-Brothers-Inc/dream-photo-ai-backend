@@ -1,7 +1,8 @@
-from typing import Dict, List, Optional, Any, Tuple
+# app/repository/user.py
+
+from typing import Dict, List, Optional, Any
 import logging
 from app.repository.db import BaseRepository
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,6 @@ class UserRepository(BaseRepository):
         VALUES ({", ".join(values)})
         RETURNING *
         '''
-
         return self.execute_with_returning(query, params)
 
     def update(self, user_id: int, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -62,7 +62,6 @@ class UserRepository(BaseRepository):
         WHERE user_id = %(user_id)s
         RETURNING *
         '''
-
         return self.execute_with_returning(query, params)
 
     def delete(self, user_id: int) -> bool:
@@ -74,14 +73,29 @@ class UserRepository(BaseRepository):
             logger.error(f"Ошибка при удалении пользователя {user_id}: {e}")
             return False
 
-    def update_tokens(self, user_id: int, amount: int) -> Optional[Dict[str, Any]]:
+    def increment_tokens(self, user_id: int, tokens: int) -> bool:
+        """
+        Увеличивает количество токенов у пользователя
+        """
         query = '''
         UPDATE "user"
-        SET tokens_left = tokens_left + %(amount)s
+        SET tokens_left = tokens_left + %(tokens)s
         WHERE user_id = %(user_id)s
-        RETURNING *
         '''
-        return self.execute_with_returning(query, {"user_id": user_id, "amount": amount})
+        affected_rows = self.execute_non_query(query, {"user_id": user_id, "tokens": tokens})
+        return affected_rows > 0
+
+    def decrement_tokens(self, user_id: int, tokens: int) -> bool:
+        """
+        Уменьшает количество токенов у пользователя, если хватает баланса.
+        """
+        query = '''
+        UPDATE "user"
+        SET tokens_left = tokens_left - %(tokens)s
+        WHERE user_id = %(user_id)s AND tokens_left >= %(tokens)s
+        '''
+        affected_rows = self.execute_non_query(query, {"user_id": user_id, "tokens": tokens})
+        return affected_rows > 0
 
     def get_user_referrals(self, user_id: int) -> List[Dict[str, Any]]:
         query = 'SELECT * FROM "user" WHERE referrer_id = %(user_id)s'
