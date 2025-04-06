@@ -8,7 +8,7 @@ from datetime import datetime
 from app.repository.promo_code import PromoCodeRepository
 from app.utils.permissions import has_admin_permission
 
-router = Router()
+create_promo_router = Router()
 repo = PromoCodeRepository()
 
 
@@ -16,6 +16,7 @@ class PromoCodeCreateState(StatesGroup):
     entering_name = State()
     configuring = State()
     editing_field = State()
+
 
 PARAMETERS = ["tokens_amount", "discount_percent", "valid_to", "max_usages"]
 DEFAULTS = {
@@ -59,7 +60,7 @@ def format_config_text(data):
     )
 
 
-@router.message(Command("create_promo"))
+@create_promo_router.message(Command("create_promo"))
 async def start_creation(message: Message, state: FSMContext):
     if not has_admin_permission(message.from_user.id, "CEO"):
         return await message.reply("❌ У вас нет прав для выполнения этой команды.")
@@ -68,7 +69,7 @@ async def start_creation(message: Message, state: FSMContext):
     await state.set_state(PromoCodeCreateState.entering_name)
 
 
-@router.message(PromoCodeCreateState.entering_name)
+@create_promo_router.message(PromoCodeCreateState.entering_name)
 async def set_name(message: Message, state: FSMContext):
     code = message.text.strip().upper()
     if repo.get_by_code(code):
@@ -80,7 +81,7 @@ async def set_name(message: Message, state: FSMContext):
     await state.update_data(last_bot_msg_id=sent.message_id)
 
 
-@router.callback_query(F.data.startswith("edit_"))
+@create_promo_router.callback_query(F.data.startswith("edit_"))
 async def start_edit(callback: CallbackQuery, state: FSMContext):
     short_param = callback.data.replace("edit_", "")
     real_param = PARAM_MAP[short_param]
@@ -97,7 +98,7 @@ async def start_edit(callback: CallbackQuery, state: FSMContext):
     await state.update_data(prompt_msg_id=prompt.message_id)
 
 
-@router.message(PromoCodeCreateState.editing_field)
+@create_promo_router.message(PromoCodeCreateState.editing_field)
 async def receive_value(message: Message, state: FSMContext):
     data = await state.get_data()
     param = data.get("editing_param")
@@ -124,13 +125,13 @@ async def receive_value(message: Message, state: FSMContext):
         await message.answer("⚠ Неверный формат. Попробуйте ещё раз.")
 
 
-@router.callback_query(F.data == "cancel")
+@create_promo_router.callback_query(F.data == "cancel")
 async def cancel_creation(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text("❌ Создание промо-кода отменено.")
 
 
-@router.callback_query(F.data == "done")
+@create_promo_router.callback_query(F.data == "done")
 async def create_promo(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     promo = repo.create({

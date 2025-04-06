@@ -4,11 +4,11 @@ from aiogram.filters import CommandObject, Command
 from app.repository.promo_code import PromoCodeRepository
 from app.utils.permissions import has_admin_permission
 
-router = Router()
+activate_promo_router = Router()
 repo = PromoCodeRepository()
 
 
-@router.message(Command("activate_promo"))
+@activate_promo_router.message(Command("activate_promo"))
 async def activate_promo(message: Message, command: CommandObject):
     if not has_admin_permission(message.from_user.id, "CEO"):
         return await message.reply("❌ У вас нет прав для выполнения этой команды.")

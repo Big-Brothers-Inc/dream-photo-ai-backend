@@ -14,8 +14,15 @@ class LoraRepository(BaseRepository):
         query = 'SELECT * FROM "lora" WHERE lora_id = %(lora_id)s'
         return self.execute_query_single(query, {"lora_id": lora_id})
 
+    def get_all(self) -> List[Dict[str, Any]]:
+        """
+        Получает все записи LoRA без фильтрации по статусу.
+        """
+        query = 'SELECT * FROM "lora" ORDER BY lora_id DESC'
+        return self.execute_query(query)
+
     def get_all_active(self) -> List[Dict[str, Any]]:
-        query = 'SELECT * FROM "lora" WHERE is_active = TRUE'
+        query = 'SELECT * FROM "lora" WHERE is_active = TRUE ORDER BY lora_id DESC'
         return self.execute_query(query)
 
     def get_by_user(self, user_id: int) -> List[Dict[str, Any]]:

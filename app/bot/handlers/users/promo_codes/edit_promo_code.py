@@ -8,7 +8,7 @@ from datetime import datetime
 from app.repository.promo_code import PromoCodeRepository
 from app.utils.permissions import has_admin_permission
 
-router = Router()
+edit_promo_router = Router()
 repo = PromoCodeRepository()
 
 
@@ -16,6 +16,7 @@ class PromoCodeEditState(StatesGroup):
     entering_code = State()
     configuring = State()
     editing_field = State()
+
 
 PARAM_MAP = {
     "tokens": "tokens_amount",
@@ -27,12 +28,12 @@ PARAM_MAP = {
 
 def edit_menu_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎟 Токены", callback_data="edit_tokens")],
-        [InlineKeyboardButton(text="💸 Скидка", callback_data="edit_discount")],
-        [InlineKeyboardButton(text="⏳ Срок действия", callback_data="edit_days")],
-        [InlineKeyboardButton(text="♾ Макс. использований", callback_data="edit_max")],
-        [InlineKeyboardButton(text="✅ Сохранить", callback_data="save_edit")],
-        [InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_edit")]
+        [InlineKeyboardButton(text="🎟 Токены", callback_data="promo_edit_tokens")],
+        [InlineKeyboardButton(text="💸 Скидка", callback_data="promo_edit_discount")],
+        [InlineKeyboardButton(text="⏳ Срок действия", callback_data="promo_edit_days")],
+        [InlineKeyboardButton(text="♾ Макс. использований", callback_data="promo_edit_max")],
+        [InlineKeyboardButton(text="✅ Сохранить", callback_data="promo_save_edit")],
+        [InlineKeyboardButton(text="❌ Отменить", callback_data="promo_cancel_edit")]
     ])
 
 
@@ -47,7 +48,7 @@ def format_edit_text(promo):
     )
 
 
-@router.message(Command("edit_promo"))
+@edit_promo_router.message(Command("edit_promo"))
 async def ask_promo_code(message: Message, state: FSMContext):
     if not has_admin_permission(message.from_user.id, "CEO"):
         return await message.answer("❌ Недостаточно прав.")
@@ -56,7 +57,7 @@ async def ask_promo_code(message: Message, state: FSMContext):
     await message.answer("Введите название промо-кода, который хотите отредактировать:")
 
 
-@router.message(PromoCodeEditState.entering_code)
+@edit_promo_router.message(PromoCodeEditState.entering_code)
 async def receive_code(message: Message, state: FSMContext):
     code = message.text.strip().upper()
     promo = repo.get_by_code(code)
@@ -72,9 +73,9 @@ async def receive_code(message: Message, state: FSMContext):
     await state.update_data(last_bot_msg_id=sent.message_id)
 
 
-@router.callback_query(F.data.startswith("edit_"))
+@edit_promo_router.callback_query(F.data.startswith("promo_edit_"))
 async def begin_edit(callback: CallbackQuery, state: FSMContext):
-    short_param = callback.data.replace("edit_", "")
+    short_param = callback.data.replace("promo_edit_", "")
     real_param = PARAM_MAP.get(short_param)
 
     await state.update_data(editing_param=real_param)
@@ -92,7 +93,7 @@ async def begin_edit(callback: CallbackQuery, state: FSMContext):
     await state.update_data(prompt_msg_id=prompt.message_id)
 
 
-@router.message(PromoCodeEditState.editing_field)
+@edit_promo_router.message(PromoCodeEditState.editing_field)
 async def receive_new_value(message: Message, state: FSMContext):
     data = await state.get_data()
     param = data.get("editing_param")
@@ -123,13 +124,13 @@ async def receive_new_value(message: Message, state: FSMContext):
         await message.answer("⚠ Неверный формат. Попробуйте ещё раз.")
 
 
-@router.callback_query(F.data == "cancel_edit")
+@edit_promo_router.callback_query(F.data == "promo_cancel_edit")
 async def cancel_editing(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text("❌ Редактирование промо-кода отменено.")
 
 
-@router.callback_query(F.data == "save_edit")
+@edit_promo_router.callback_query(F.data == "promo_save_edit")
 async def save_edit(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     updated = repo.update(data["promo_id"], {

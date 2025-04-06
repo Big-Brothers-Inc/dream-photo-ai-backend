@@ -5,10 +5,10 @@ from app.repository.promo_code import PromoCodeRepository
 from app.repository.promo_usage import PromoUsageRepository
 from app.repository.enrollment import EnrollmentRepository
 
-router = Router()
+promo_router = Router()
 
 
-@router.message(F.text.regexp(r"^/promo\s+(\w+)$"))
+@promo_router.message(F.text.regexp(r"^/promo\s+(\w+)$"))
 async def apply_promo(message: types.Message, state: FSMContext):
     promo_code_input = message.text.split(maxsplit=1)[1].strip()
     user_id = message.from_user.id
